@@ -51,10 +51,19 @@
 " ---------[ HERE WE GO! ]---------
 
 function s:TryToFigureThatTimestampRegex()
-    " thanks to DHulme for the idea...
-    let s:timestampformat = strftime("%c")
-    let s:timestampformat = substitute(s:timestampformat,'\a','\\a','g')
-    let s:timestampformat = substitute(s:timestampformat,'\d','\\d','g')
+    " 3 letters for day name
+    " space
+    " 3 letter for month
+    " space
+    " an optional space that occurs if day is single digit
+    " one or two digit for day
+    " space
+    " hour:min:seconds
+    " space
+    " year
+    let s:timestampformat = '\(\a\{3}\s\)\{2}\s\{0,1}\d\{1,2}\s\(\d\{2}:\)\{2}\d\{2}\s\d\{4}'
+endfunction
+
 endfunction
 
 function LogpadInit()
