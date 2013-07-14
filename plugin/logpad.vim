@@ -34,6 +34,10 @@
 "   >> allows logpad to ignore a file's read-only flag
 "   >> default value: 0
 "
+" let LogpadLogDuration = [ 0 / 1 ]
+"   >> adds the duration elapsed since last timestamp under the new timestamp
+"   >> default value: 0
+"
 " -----------[ CHANGES ]-----------
 "
 " v1.4: added check and switch for read-only flag
