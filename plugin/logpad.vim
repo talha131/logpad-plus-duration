@@ -99,7 +99,7 @@ function LogpadInit()
 
         " enter insert mode if enabled
         if g:LogpadInsert == 1
-            let &insertmode = 1
+            execute  ":startinsert" 
         endif
     endif
 endfunction
