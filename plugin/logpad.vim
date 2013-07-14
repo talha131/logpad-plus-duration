@@ -50,7 +50,7 @@
 "
 " ---------[ HERE WE GO! ]---------
 
-function s:TryToFigureThatTimestampRegex()
+function! s:TryToFigureThatTimestampRegex()
     " 3 letters for day name
     " space
     " 3 letter for month
@@ -64,18 +64,140 @@ function s:TryToFigureThatTimestampRegex()
     let s:timestampformat = '\(\a\{3}\s\)\{2}\s\{0,1}\d\{1,2}\s\(\d\{2}:\)\{2}\d\{2}\s\d\{4}'
 endfunction
 
+
+function! s:CalculateMonth(month)
+   if (match(a:month, 'Jan\c') != -1) 
+       return 0
+   elseif (match(a:month, 'Feb\c') != -1)
+       return 1
+   elseif (match(a:month, 'Mar\c') != -1)
+       return 2
+   elseif (match(a:month, 'Apr\c') != -1)
+       return 3
+   elseif (match(a:month, 'May\c') != -1)
+       return 4
+   elseif (match(a:month, 'Jun\c') != -1)
+       return 5
+   elseif (match(a:month, 'Jul\c') != -1)
+       return 6
+   elseif (match(a:month, 'Aug\c') != -1)
+       return 7
+   elseif (match(a:month, 'Sep\c') != -1)
+       return 8
+   elseif (match(a:month, 'Oct\c') != -1)
+       return 9
+   elseif (match(a:month, 'Nov\c') != -1)
+       return 10
+   elseif (match(a:month, 'Dec\c') != -1)
+       return 11
+   endif
+
+   return -1
 endfunction
 
-function LogpadInit()
+
+function! s:SplitStringTime(timeString)
+    let splitedTime = split(a:timeString)
+    let month = s:CalculateMonth(splitedTime[1])
+    let day = splitedTime[2]
+    let year = splitedTime[4]
+    
+    let time = split(splitedTime[3], ':')
+    let hour = time[0]
+    let min = time[1]
+    let sec = time[2]
+
+    return [year, month, day, hour, min, sec]
+endfunction
+
+
+function! s:ConvertTimeToSeconds(timestamp)
+    " First calculate seconds for the years elapsed
+    " A day consists of 86400 seconds
+    let seconds = (a:timestamp[0] - 2010) * 365 * 86400
+    let seconds += (a:timestamp[1] * 30 * 86400) + (a:timestamp[2] * 86400) + (a:timestamp[3] * 3600) + (a:timestamp[4] * 60) + (a:timestamp[5])
+    return seconds
+endfunction
+
+
+function! s:ConvertSecondsToDate(seconds)
+    let num_seconds = a:seconds
+
+    let year = num_seconds / (365*60*60*24)
+    let num_seconds -= year * (365*60*60*24)
+    let month = num_seconds / (30*60*60*24)
+    let num_seconds -= month * (30*60*60*24)
+    let days = num_seconds / (60*60*24)
+    let num_seconds -= days * (60*60*24)
+    let hours = num_seconds / (60*60)
+    let num_seconds -= hours * (60*60)
+    let minutes = num_seconds / 60
+    let num_seconds -= minutes * 60
+
+    return [year, month, days, hours, minutes, num_seconds]
+endfunction
+
+
+function! s:CalculateTimeElapsed(oldTimestamp, newTimestamp)
+    let [year, month, day, hour, min, sec] = s:SplitStringTime(a:oldTimestamp)
+    let [Year, Month, Day, Hour, Min, Sec] = s:SplitStringTime(a:newTimestamp)
+
+    let old_seconds = s:ConvertTimeToSeconds([year, month, day, hour, min, sec])
+    let new_seconds = s:ConvertTimeToSeconds([Year, Month, Day, Hour, Min, Sec])
+
+    let diff_seconds = abs(new_seconds - old_seconds)
+
+    return s:ConvertSecondsToDate(diff_seconds)
+endfunction
+
+
+function! s:TimeElapsedStr(timeElapsed)
+    let timeElapsedString = ""
+
+    if (a:timeElapsed[0] > 0)
+        let timeElapsedString = a:timeElapsed[0] . " year "
+    endif
+
+    if (a:timeElapsed[1] > 0)
+        let timeElapsedString = timeElapsedString . a:timeElapsed[1] . " month "
+    endif
+
+    if (a:timeElapsed[2] > 0)
+        let timeElapsedString = timeElapsedString . a:timeElapsed[2] . " day "
+    endif
+
+    if (a:timeElapsed[3] > 0)
+        let timeElapsedString = timeElapsedString . a:timeElapsed[3] . " hour "
+    endif
+
+    if (a:timeElapsed[4] > 0)
+        let timeElapsedString = timeElapsedString . a:timeElapsed[4] . " min "
+    endif
+
+    if (a:timeElapsed[5] > 0)
+        let timeElapsedString = timeElapsedString . a:timeElapsed[5] . " sec "
+    endif
+
+    if (len(timeElapsedString) > 0)
+        let timeElapsedString = "Time elapsed: " . timeElapsedString
+    endif
+
+    return timeElapsedString
+endfunction
+
+
+function! LogpadInit()
     " check the configuration, set it (and exit) if needed
     if !exists('g:LogpadEnabled')        | let g:LogpadEnabled        = 1 | endif
     if !exists('g:LogpadInsert')         | let g:LogpadInsert         = 0 | endif
     if !exists('g:LogpadLineBreak')      | let g:LogpadLineBreak      = 0 | endif
     if !exists('g:LogpadIgnoreNotes')    | let g:LogpadIgnoreNotes    = 0 | endif
     if !exists('g:LogpadIgnoreReadOnly') | let g:LogpadIgnoreReadOnly = 0 | endif
+    if !exists('g:LogpadLogDuration')    | let g:LogpadLogDuration = 0 | endif
 
     if g:LogpadEnabled == 0                          | return             | endif
     if g:LogpadIgnoreReadOnly == 0 && &readonly == 1 | return             | endif
+
 
     " main part
     if getline(1) =~ '^\.LOG$'
@@ -96,7 +218,32 @@ function LogpadInit()
                 " add a single empty divider line if requested
                 let s:failvar = append(line('$'), "")
             endif
-            let s:failvar = append(line('$'), strftime("%c"))
+
+            " if g:LogpadLogDuration is defined then
+            " move the cursor to the end of file.
+            " search for the pattern
+            " if pattern is present read it
+            " calculate duration
+            " log duration
+            "
+            let latestTime = strftime('%c')
+            let s:duration = ""
+
+            if g:LogpadLogDuration == 1
+                call cursor(line('$'), 0)
+                let linenumber = search(s:timestampformat, 'b')
+                if (linenumber != 0)
+                    let lastTimestamp = getline(linenumber)
+                    let s:duration = s:TimeElapsedStr(s:CalculateTimeElapsed(lastTimestamp, latestTime))
+                endif
+            endif
+
+            let s:failvar = append(line('$'), latestTime)
+
+            if (len(s:duration) > 0)
+                let s:failvar = append(line('$'), s:duration)
+            endif
+
             let s:failvar = append(line('$'), "")
 
             " go to the last line
