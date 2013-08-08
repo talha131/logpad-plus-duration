@@ -1,14 +1,45 @@
 " ---------[ INFORMATION ]---------
 "
-" Vim plugin for emulating Windows Notepad's logging functionality.
-" Maintainer:  Sven Knurr <der_tuxman@arcor.de>
-" Version:     1.4
-" Last Change: 2009 Dec 19
+" Vim plugin for emulating Windows Notepad's logging functionality, with
+" additional capablity to log duration.
+" Maintainer:  Talha Mansoor <talha131@gmail.com>
+" Version:     1.0
+" Last Change: 2013 August 08
 "
 " --------[ HOW TO USE IT ]--------
 "
 " Create a new text file. Insert .LOG. Save it. Then reopen it.
-" Now you have a timestamped log file. :-)
+" Now you have a timestamped log file. 
+"
+" Example:
+"
+"     .LOG
+"     Sun Jul 14 17:38:44 2013
+"     First entry of the day
+"     Sun Jul 14 17:46:11 2013
+"     Replied to customer emails.
+"     Sun Jul 14 18:41:43 2013
+"     Skype session with remote team.
+"
+" If LogpadLogDuration is set then time elapsed since last event will also be
+" added
+"
+" Example:
+"
+"     .LOG
+"     Sun Jul 14 17:38:44 2013
+"     First entry of the day
+"     Sun Jul 14 17:46:11 2013
+"     Time elapsed: 7 min 27 sec 
+"     Replied to customer emails.
+"     Sun Jul 14 18:41:43 2013
+"     Time elapsed: 55 min 32 sec 
+"     Skype session with remote team.
+"
+"
+" Now you can see that your Skype session took 55 min. Your replied to emails within
+" 7 min. Without this feature, you will have to do mental maths to calculate the
+" time it took you to do a work.
 "
 " --------[ CONFIGURATION ]--------
 "
@@ -19,7 +50,7 @@
 "   >> default value: 1
 "
 " let LogpadInsert = [ 0 / 1 ]
-"   >> automatically enables &insertmode when a new log entry is created
+"   >> automatically enables insert mode when a new log entry is created
 "   >> default value: 0
 "
 " let LogpadLineBreak = [ 0 / 1 ]
@@ -40,33 +71,34 @@
 "
 " -----------[ CHANGES ]-----------
 "
-" v1.4: added check and switch for read-only flag
-" v1.3: added support for GetLatestVimScripts, removed initial cursor() call
-" v1.2: fix: converted logpad.vim to UNIX format (was not working outside Windows)
-" v1.1: fix: the LogpadLineBreak setting also affects the single empty line below ".LOG"
-" v1.0: initial release.
+" Version 1.0
+" New Feature: 
+"     Insert time elapsed since last timestamp. 
+"     This is useful if user needs to check how much time has passed since the last entry.
+" Bug fixes:
+" Two bug fixes in Version 1.4 of original logpad plugin
+"     1. If user sets LogpadInsert = 1 then Logpad will start insert mode and make 
+"     it default. When insert made is default, keys like Esc are not mapped. You are 
+"     forced to use Ctrl-O or Ctrl-L to execute normal mode commands. It is understandable 
+"     that user will not want to change Vim behaviour. All he wants is to be in the insert mode
+"     so that he can start typing immediately.
+"     2. Logpad relies on a timestamp format to check whether there are
+"     timestamps below .LOG keyword or not. 
+"     The way timestamp format is created programmatically gives you two
+"     types of timestamps. One for dates that have single digit and two for
+"     those dates that have two digit. This, in turn, creates a bug. If Logpad
+"     gets a timestamp for double digit date, like when the user is using the
+"     plugin on 12th of the month, and the date under .LOG is single digit,
+"     like 9 th of the month, Logpad will consider that date as a note and
+"     will not further log timestamps.
 "
 " -----------[ CREDITS ]-----------
 "
-" This plugin was inspired by a German weblog posting, available at:
-"    http://schwerdtfegr.wordpress.com/2009/08/27/eine-notepad-funkzjon-die-man-missen-lernt/
-" Thanks to the guys in #vim (freenode.net) for basic help.
+" This plugin is a fork of logpad plugin by Sven Knurr <der_tuxman@arcor.de> available at:
+" http://vim.sourceforge.net/scripts/script.php?script_id=2775
+
 "
 " ---------[ HERE WE GO! ]---------
-
-function! s:TryToFigureThatTimestampRegex()
-    " 3 letters for day name
-    " space
-    " 3 letter for month
-    " space
-    " an optional space that occurs if day is single digit
-    " one or two digit for day
-    " space
-    " hour:min:seconds
-    " space
-    " year
-    let s:timestampformat = '\(\a\{3}\s\)\{2}\s\{0,1}\d\{1,2}\s\(\d\{2}:\)\{2}\d\{2}\s\d\{4}'
-endfunction
 
 
 function! s:CalculateMonth(month)
@@ -197,15 +229,25 @@ function! LogpadInit()
     if !exists('g:LogpadLineBreak')      | let g:LogpadLineBreak      = 0 | endif
     if !exists('g:LogpadIgnoreNotes')    | let g:LogpadIgnoreNotes    = 0 | endif
     if !exists('g:LogpadIgnoreReadOnly') | let g:LogpadIgnoreReadOnly = 0 | endif
-    if !exists('g:LogpadLogDuration')    | let g:LogpadLogDuration = 0 | endif
+    if !exists('g:LogpadLogDuration')    | let g:LogpadLogDuration = 0    | endif
 
     if g:LogpadEnabled == 0                          | return             | endif
     if g:LogpadIgnoreReadOnly == 0 && &readonly == 1 | return             | endif
 
-
     " main part
     if getline(1) =~ '^\.LOG$'
-        call s:TryToFigureThatTimestampRegex()
+
+        " 3 letters for day name
+        " space
+        " 3 letter for month
+        " space
+        " an optional space that occurs if day is single digit
+        " one or two digit for day
+        " space
+        " hour:min:seconds
+        " space
+        " year
+        let s:timestampformat = '\(\a\{3}\s\)\{2}\s\{0,1}\d\{1,2}\s\(\d\{2}:\)\{2}\d\{2}\s\d\{4}'
 
         if nextnonblank(2) > 0
             if getline(nextnonblank(2)) !~ s:timestampformat && g:LogpadIgnoreNotes == 0
@@ -229,7 +271,6 @@ function! LogpadInit()
             " if pattern is present read it
             " calculate duration
             " log duration
-            "
             let latestTime = strftime('%c')
             let s:duration = ""
 
@@ -243,6 +284,7 @@ function! LogpadInit()
             endif
 
             let s:failvar = append(line('$'), latestTime)
+
 
             if (len(s:duration) > 0)
                 let s:failvar = append(line('$'), s:duration)
@@ -266,7 +308,3 @@ endfunction
 
 autocmd BufReadPost * call LogpadInit()
 
-" -------[ COMPAT COMMENTS ]-------
-
-" GetLatestVimScripts: 2775 1 :AutoInstall: logpad.vim
-" vim:ft=vim:sw=4:sts=4:et
