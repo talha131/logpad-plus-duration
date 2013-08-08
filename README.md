@@ -1,9 +1,31 @@
-This is a mirror of [Logpad at VimScripts](http://www.vim.org/scripts/script.php?script_id=2775).
+Logpad + Duration
+=================
 
-Description
-===========
+Vim plugin to emulate Windows Notepad logging feature, and log duration of each entry.
 
-logpad.vim emulates Windows Notepad's logging feature.
+Author          | Talha Mansoor
+----------------|-----
+Author Email    | talha131@gmail.com 
+Author Homepage | http://onCrashReboot.com 
+Github Account  | https://github.com/talha131 
+
+
+Credits
+-------
+
+This plugin is a fork of [logpad plugin](http://vim.sourceforge.net/scripts/script.php?script_id=2775) by Sven Knurr.
+
+Background
+==========
+
+It is suggested to keep a daily log to stay focused on productivity. Life Hacker did [an article](http://lifehacker.com/5582372/use-a-daily-log-to-keep-yourself-focused-on-productivity) on it. I looked for plugin to have similar feature in Vim and that landed me on Logpad plugin. 
+
+Wouldn't it be nice if besides logging, we can also see how much time was spent on the latest activity? This is exactly what this plugin attempts to do. If you enable it, it will calculate the time elapsed and insert it in the file.
+
+With this plugin you get all the features of Logpad plugin plus log duration feature.
+
+How to use it
+=============
 
 Create a new file, write .LOG as the first line and save it. Every time you reopen the file, a new line with the current timestamp is added, so you can easily maintain a chronologic log of your tasks.
 
@@ -41,3 +63,35 @@ By default, this plugin works the same way as the original Notepad. You can modi
 * adds the time elapsed since last timestamp under the new timestamp
 * available values : [0 ,1]
 * default value: 0
+
+Example (without LogpadLogDuration)
+===================================
+
+```
+.LOG
+Sun Jul 14 17:38:44 2013
+First entry of the day
+Sun Jul 14 17:46:11 2013
+Replied to customer emails.
+Sun Jul 14 18:41:43 2013
+Skype session with remote team.
+```
+
+Example (with LogpadLogDuration)
+================================
+
+If `LogpadLogDuration` is set then time elapsed since last event will also be added.
+
+```
+.LOG
+Sun Jul 14 17:38:44 2013
+First entry of the day
+Sun Jul 14 17:46:11 2013
+Time elapsed: 7 min 27 sec
+Replied to customer emails.
+Sun Jul 14 18:41:43 2013
+Time elapsed: 55 min 32 sec 
+Skype session with remote team.
+```
+
+Now you can see that your Skype session took 55 min. Your replied to emails within 7 min. Without this feature, you will have to do mental maths to calculate the time it took you to do a work.
